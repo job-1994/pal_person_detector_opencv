@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+	<include file="$(find pal_person_detector_opencv)/launch/detector.launch" />
+	  <!--  
+	  <node name="image_view" pkg="imag_view" type="image_view" args=>
+	  -->
+
+</launch>
