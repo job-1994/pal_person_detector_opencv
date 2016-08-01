@@ -2,8 +2,11 @@
 <launch>
 
 	<include file="$(find pal_person_detector_opencv)/launch/detector.launch" />
-	  <!--  
-	  <node name="image_view" pkg="imag_view" type="image_view" args=>
-	  -->
+	
+	<node name="tiago_move" pkg="pal_person_detector_opencv" type="tiago_move" output="screen"/>
+<!-- 	  <node name="image_view" pkg="image_view" type="image_view" output="screen">
+	  	<remap from="image" to="person_detector/debug" />
+	  	<remap from="image_transport" to="compressed" />
+	  </node> -->
 
 </launch>

@@ -111,19 +111,20 @@ PersonDetector::PersonDetector(ros::NodeHandle& nh,
   _imageScaling(imageScaling),
   _imageTransport(nh),
   _privateImageTransport(pnh)
-{  
+{  ROS_INFO("Started constructor");
 
   _hogCPU.reset( new cv::HOGDescriptor );
   _hogCPU->setSVMDetector( cv::HOGDescriptor::getDefaultPeopleDetector() );
 
-  image_transport::TransportHints transportHint("raw");
+  image_transport::TransportHints transportHint("compressed");
 
-  _imageSub   = _imageTransport.subscribe("image", 1, &PersonDetector::imageCallback, this, transportHint);
+  _imageSub   = _imageTransport.subscribe("/xtion/rgb/image_raw", 1, &PersonDetector::imageCallback, this, transportHint);
   _imDebugPub = _privateImageTransport.advertise("debug", 1);
 
   _detectionPub = _pnh.advertise<pal_detection_msgs::Detections2d>("detections", 1);
 
   cv::namedWindow("person detections");
+  ROS_INFO("Finished constructor");
 }
 
 PersonDetector::~PersonDetector()
@@ -134,7 +135,8 @@ PersonDetector::~PersonDetector()
 void PersonDetector::imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
   cv_bridge::CvImageConstPtr cvImgPtr;
-  cvImgPtr = cv_bridge::toCvShare(msg);
+  // cvImgPtr = cv_bridge::toCvShare(msg);
+    cvImgPtr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 
   _imgTimeStamp = msg->header.stamp;
 
@@ -182,7 +184,7 @@ void PersonDetector::scaleDetections(std::vector<cv::Rect>& detections,
 
 void PersonDetector::detectPersons(const cv::Mat& img,
                                    std::vector<cv::Rect>& detections)
-{ 
+{
   double start = static_cast<double>(cv::getTickCount());
 
   _hogCPU->detectMultiScale(img,
@@ -226,7 +228,11 @@ void PersonDetector::publishDebugImage(cv::Mat& img,
   BOOST_FOREACH(const cv::Rect& roi, detections)
   {
     cv::rectangle(img, roi, CV_RGB(0,255,0), 2);
+    //create circle on the center of the person detected
+    cv::circle(img, cv::Point(roi.x + roi.width/2, roi.y + roi.height/4), 10, CV_RGB(255,0,0));
+
   }
+    cv::circle(img, cv::Point(320, 190), 10, CV_RGB(0,255,0));
 
   if ( img.channels() == 3 && img.depth() == CV_8U )
     _cvImgDebug.encoding = sensor_msgs::image_encodings::BGR8;
@@ -268,11 +274,11 @@ int main(int argc, char **argv)
 
   ROS_INFO_STREAM("Spinning to serve callbacks ...");
 
-  ros::Rate rate(freq);
+  // ros::Rate rate(freq);
   while ( ros::ok() )
   {
     cbQueue.callAvailable();
-    rate.sleep();
+    // rate.sleep();
   }
 
   return 0;
