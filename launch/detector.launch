@@ -10,4 +10,9 @@
     <param name="scale" value="$(arg scale)"/>
   </node>
 
+  <node name="image_view_person" pkg="image_view" type="image_view">
+  	<remap from="image" to="person_detector/debug"/>
+  	<remap from="image_transport" to="compressed"/>
+  </node>
+
 </launch>

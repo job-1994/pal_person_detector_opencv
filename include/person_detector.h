@@ -32,111 +32,73 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-/** \author Job van Dieten <job.1994@gmail.com> */
+/** \author Jordi Pages <jordi.pages@pal-robotics.com> */
 
-// PAL Headers
+// PAL headers
 #include <pal_detection_msgs/Detections2d.h>
 
-//ROS Headers
+// ROS headers
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <ros/callback_queue.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
-#include <geometry_msgs/Twist.h>
-#include <sensor_msgs/LaserScan.h>
-
 
 // OpenCV headers
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+// Boost headers
+#include <boost/scoped_ptr.hpp>
+#include <boost/foreach.hpp>
 
-class TiagoMove
+// Std C++ headers
+#include <vector>
+
+/**
+ * @brief The PersonDetector class encapsulating an image subscriber and the OpenCV's CPU HOG person detector
+ *
+ * @example rosrun person_detector_opencv person_detector image:=/camera/image _rate:=5 _scale:=0.5
+ *
+ */
+class PersonDetector
 {
 public:
-	TiagoMove(ros::NodeHandle& nh);
-	~TiagoMove();
-	ros::Subscriber detection_sub, laser_sub;
-	ros::Publisher pub_laser, pub_vel;
 
-	std::vector<pal_detection_msgs::Detection2d> det_vector;
-	int pos_x;
-	bool move = true;
+  PersonDetector(ros::NodeHandle& nh,
+                 ros::NodeHandle& pnh,
+                 double imageScaling = 1.0);
+  virtual ~PersonDetector();
+
 protected:
-	void detectionsCB(const pal_detection_msgs::Detections2d& frame);
-	void laserCB(const sensor_msgs::LaserScan::ConstPtr& scan);
-	void movement();	
+
+  ros::NodeHandle _nh, _pnh;
+
+  void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+
+  void detectPersons(const cv::Mat& img,
+                     std::vector<cv::Rect>& detections);
+
+  void scaleDetections(std::vector<cv::Rect>& detections,
+                       double scaleX, double scaleY) const;
+
+  void publishDetections(const std::vector<cv::Rect>& detections) const;
+
+  void publishDebugImage(cv::Mat& img,
+                         const std::vector<cv::Rect>& detections) const;
+
+  double _imageScaling;
+  mutable cv_bridge::CvImage _cvImgDebug;
+
+  boost::scoped_ptr<cv::HOGDescriptor> _hogCPU;
+
+  image_transport::ImageTransport _imageTransport, _privateImageTransport;
+  image_transport::Subscriber _imageSub;
+  ros::Time _imgTimeStamp;
+
+  ros::Publisher _detectionPub;
+  image_transport::Publisher _imDebugPub;
+
 };
-
-TiagoMove::TiagoMove(ros::NodeHandle& nh)
-{
-	detection_sub = nh.subscribe("person_detector/detections", 1, &TiagoMove::detectionsCB, this);
-	pub_vel = nh.advertise<geometry_msgs::Twist>("nav_vel", 1000);
-	laser_sub = nh.subscribe("/scan", 1, &TiagoMove::laserCB, this);
-}
-
-TiagoMove::~TiagoMove(){}
-
-void TiagoMove::detectionsCB(const pal_detection_msgs::Detections2d& frame)
-{
-	det_vector = frame.detections;
-	det_vector.resize(1);
-	pos_x = det_vector.front().x + det_vector.front().width/2;
-}
-
-void TiagoMove::laserCB(const sensor_msgs::LaserScan::ConstPtr& scan)
-{
-	int vector_size = scan->ranges.size();
-	float dist_vals[vector_size];
-	int start = (vector_size/2) - (0.1*vector_size); 
-	int end = (vector_size/2) + (0.1*vector_size); 
-	move = true;
-	for(int i = start; i<end; ++i)
-	{
-    	dist_vals[i] = scan->ranges[i];
-    	if(dist_vals[i] < 1 && dist_vals[i] != 0)
-    	{
-    		move = false;
-    		break;
-    	}
-	}
-	this->movement();
-}
-
-void TiagoMove::movement()
-{
-	geometry_msgs::Twist cmd;
-	int mid_x = 320;
-	if(pos_x > 650)
-		pos_x = 0;
-	float diff = std::abs (pos_x - mid_x);
-	float angular_speed = diff/500;
-
-	if(move == true)
-		cmd.linear.x = 0.3;
-	else
-		cmd.linear.x = 0;
-
-	if(pos_x < mid_x && pos_x !=0)
-		cmd.angular.z = angular_speed;
-	else if(pos_x > mid_x && pos_x!=0)
-		cmd.angular.z = -angular_speed;
-	else
-		cmd.angular.z = 0;
-	
-	pub_vel.publish(cmd);
-}
-
-int main(int argc, char **argv)
-{
-  ros::init(argc,argv,"tiago_move"); 
-  ros::NodeHandle nh;
-
-  TiagoMove tm(nh);
-
-  ros::spin();
-  return 0;
-}

@@ -13,6 +13,8 @@ catkin_package(
   CATKIN_DEPENDS image_transport cv_bridge pal_detection_msgs roscpp geometry_msgs
 )
 
+include_directories(include)
+
 add_executable(pal_person_detector_opencv src/person_detector.cpp)
 target_link_libraries(pal_person_detector_opencv ${catkin_LIBRARIES})
 

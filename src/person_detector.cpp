@@ -34,28 +34,28 @@
 
 /** \author Jordi Pages <jordi.pages@pal-robotics.com> */
 
-// PAL headers
-#include <pal_detection_msgs/Detections2d.h>
+// // PAL headers
+// #include <pal_detection_msgs/Detections2d.h>
 
-// ROS headers
-#include <ros/ros.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
-#include <ros/callback_queue.h>
-#include <sensor_msgs/Image.h>
-#include <image_transport/image_transport.h>
+// // ROS headers
+// #include <ros/ros.h>
+// #include <cv_bridge/cv_bridge.h>
+// #include <sensor_msgs/image_encodings.h>
+// #include <ros/callback_queue.h>
+// #include <sensor_msgs/Image.h>
+// #include <image_transport/image_transport.h>
 
-// OpenCV headers
-#include <opencv2/objdetect/objdetect.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+// // OpenCV headers
+// #include <opencv2/objdetect/objdetect.hpp>
+// #include <opencv2/imgproc/imgproc.hpp>
+// #include <opencv2/highgui/highgui.hpp>
 
-// Boost headers
-#include <boost/scoped_ptr.hpp>
-#include <boost/foreach.hpp>
+// // Boost headers
+// #include <boost/scoped_ptr.hpp>
+// #include <boost/foreach.hpp>
 
-// Std C++ headers
-#include <vector>
+// // Std C++ headers
+// #include <vector>
 
 /**
  * @brief The PersonDetector class encapsulating an image subscriber and the OpenCV's CPU HOG person detector
@@ -63,45 +63,47 @@
  * @example rosrun person_detector_opencv person_detector image:=/camera/image _rate:=5 _scale:=0.5
  *
  */
-class PersonDetector
-{
-public:
+#include <person_detector.h>
 
-  PersonDetector(ros::NodeHandle& nh,
-                 ros::NodeHandle& pnh,
-                 double imageScaling = 1.0);
-  virtual ~PersonDetector();
+// class PersonDetector
+// {
+// public:
 
-protected:
+//   PersonDetector(ros::NodeHandle& nh,
+//                  ros::NodeHandle& pnh,
+//                  double imageScaling = 1.0);
+//   virtual ~PersonDetector();
 
-  ros::NodeHandle _nh, _pnh;
+// protected:
 
-  void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+//   ros::NodeHandle _nh, _pnh;
 
-  void detectPersons(const cv::Mat& img,
-                     std::vector<cv::Rect>& detections);
+//   void imageCallback(const sensor_msgs::ImageConstPtr& msg);
 
-  void scaleDetections(std::vector<cv::Rect>& detections,
-                       double scaleX, double scaleY) const;
+//   void detectPersons(const cv::Mat& img,
+//                      std::vector<cv::Rect>& detections);
 
-  void publishDetections(const std::vector<cv::Rect>& detections) const;
+//   void scaleDetections(std::vector<cv::Rect>& detections,
+//                        double scaleX, double scaleY) const;
 
-  void publishDebugImage(cv::Mat& img,
-                         const std::vector<cv::Rect>& detections) const;
+//   void publishDetections(const std::vector<cv::Rect>& detections) const;
 
-  double _imageScaling;
-  mutable cv_bridge::CvImage _cvImgDebug;
+//   void publishDebugImage(cv::Mat& img,
+//                          const std::vector<cv::Rect>& detections) const;
 
-  boost::scoped_ptr<cv::HOGDescriptor> _hogCPU;
+//   double _imageScaling;
+//   mutable cv_bridge::CvImage _cvImgDebug;
 
-  image_transport::ImageTransport _imageTransport, _privateImageTransport;
-  image_transport::Subscriber _imageSub;
-  ros::Time _imgTimeStamp;
+//   boost::scoped_ptr<cv::HOGDescriptor> _hogCPU;
 
-  ros::Publisher _detectionPub;
-  image_transport::Publisher _imDebugPub;
+//   image_transport::ImageTransport _imageTransport, _privateImageTransport;
+//   image_transport::Subscriber _imageSub;
+//   ros::Time _imgTimeStamp;
 
-};
+//   ros::Publisher _detectionPub;
+//   image_transport::Publisher _imDebugPub;
+
+// };
 
 PersonDetector::PersonDetector(ros::NodeHandle& nh,
                                ros::NodeHandle& pnh,
@@ -232,7 +234,6 @@ void PersonDetector::publishDebugImage(cv::Mat& img,
     cv::circle(img, cv::Point(roi.x + roi.width/2, roi.y + roi.height/4), 10, CV_RGB(255,0,0));
 
   }
-    cv::circle(img, cv::Point(320, 190), 10, CV_RGB(0,255,0));
 
   if ( img.channels() == 3 && img.depth() == CV_8U )
     _cvImgDebug.encoding = sensor_msgs::image_encodings::BGR8;
