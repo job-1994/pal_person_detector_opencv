@@ -46,6 +46,7 @@
 #include <image_transport/image_transport.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
+#include <std_srvs/Empty.h>
 
 
 // OpenCV headers
@@ -53,38 +54,48 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-
 class TiagoMove
 {
 public:
 	TiagoMove(ros::NodeHandle& nh);
 	~TiagoMove();
-	ros::Subscriber detection_sub, laser_sub;
+    ros::Subscriber detection_sub, laser_sub;
 	ros::Publisher pub_laser, pub_vel;
 
 	std::vector<pal_detection_msgs::Detection2d> det_vector;
 	int pos_x;
-	bool move = true;
+    bool move_laser= true;
+    bool move_detection = false;
+
+    ros::ServiceClient head_client;
 protected:
 	void detectionsCB(const pal_detection_msgs::Detections2d& frame);
 	void laserCB(const sensor_msgs::LaserScan::ConstPtr& scan);
 	void movement();	
+
 };
 
 TiagoMove::TiagoMove(ros::NodeHandle& nh)
 {
 	detection_sub = nh.subscribe("person_detector/detections", 1, &TiagoMove::detectionsCB, this);
-	pub_vel = nh.advertise<geometry_msgs::Twist>("nav_vel", 1000);
-	laser_sub = nh.subscribe("/scan", 1, &TiagoMove::laserCB, this);
+    pub_vel = nh.advertise<geometry_msgs::Twist>("mobile_base_controller/cmd_vel/", 1000);
+    laser_sub = nh.subscribe("/scan", 1, &TiagoMove::laserCB, this);
+    head_client = nh.serviceClient<std_srvs::Empty>("find_head");
 }
 
 TiagoMove::~TiagoMove(){}
 
+
 void TiagoMove::detectionsCB(const pal_detection_msgs::Detections2d& frame)
 {
 	det_vector = frame.detections;
+
 	det_vector.resize(1);
 	pos_x = det_vector.front().x + det_vector.front().width/2;
+    if(det_vector.front().x == 0 && det_vector.front().y == 0)
+        move_detection = false;
+    else
+        move_detection = true;
 }
 
 void TiagoMove::laserCB(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -93,17 +104,24 @@ void TiagoMove::laserCB(const sensor_msgs::LaserScan::ConstPtr& scan)
 	float dist_vals[vector_size];
 	int start = (vector_size/2) - (0.1*vector_size); 
 	int end = (vector_size/2) + (0.1*vector_size); 
-	move = true;
+    move_laser= true;
 	for(int i = start; i<end; ++i)
 	{
     	dist_vals[i] = scan->ranges[i];
     	if(dist_vals[i] < 1 && dist_vals[i] != 0)
     	{
-    		move = false;
-    		break;
+            move_laser= false;
+            break;
     	}
 	}
+
 	this->movement();
+//    if(move_laser== false)
+//    {
+//        std_srvs::Empty emp;
+//        if(head_client.call(emp))
+//            ROS_INFO("called service");
+//    }
 }
 
 void TiagoMove::movement()
@@ -115,7 +133,7 @@ void TiagoMove::movement()
 	float diff = std::abs (pos_x - mid_x);
 	float angular_speed = diff/500;
 
-	if(move == true)
+    if(move_laser== true && move_detection == true)
 		cmd.linear.x = 0.3;
 	else
 		cmd.linear.x = 0;
@@ -125,7 +143,9 @@ void TiagoMove::movement()
 	else if(pos_x > mid_x && pos_x!=0)
 		cmd.angular.z = -angular_speed;
 	else
+	{
 		cmd.angular.z = 0;
+	}
 	
 	pub_vel.publish(cmd);
 }
